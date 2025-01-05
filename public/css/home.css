@@ -1,0 +1,46 @@
+body, html {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+.text-justify {
+    text-align: justify;
+}
+
+.card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+/*  */
+
+.about-us-card {
+    position: relative;
+    z-index: 1;
+    margin-left: -200px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.about-us-card .card-body {
+    padding: 20px;
+}
+
+.position-relative {
+    position: relative;
+}
+
+.img-about-us {
+    z-index: -1;
+}
