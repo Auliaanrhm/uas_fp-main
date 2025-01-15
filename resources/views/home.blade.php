@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
-@section('title', 'Elegance Wardrobe')
+@section('title', 'BoF Careers')
 
 @section('content')
     <div class="container my-5">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="display-4">Elegance Wardrobe</h1>
-                <p class="lead">Temukan tren fashion terbaru dan gaya abadi yang dipilih khusus untuk Anda!</p>
+                <h1 class="display-4">BoF Careers</h1>
+                <p class="lead">Temukan Karir Impianmu di Dunia Fashion melalu Platform yang menyediakan peluang terbaik!</p>
             </div>
             <div class="col-md-6 text-center">
-                <img src="{{ Vite::asset('resources/images/dress_1.png') }}" alt="Elegance Wardrobe"
+                <img src="{{ Vite::asset('resources/images/dress_1.png') }}" alt="BoF Careers"
                     class="img-fluid rounded float-end">
             </div>
         </div>
@@ -29,7 +29,7 @@
                             <div class="card-body">
                                 <h2 class="card-title">About Us</h2>
                                 <p class="lead text-justify">
-                                    Di Elegance Wardrobe, kami percaya pada pentingnya memberdayakan setiap individu untuk
+                                    Di BoF Careers, kami percaya pada pentingnya memberdayakan setiap individu untuk
                                     mengekspresikan
                                     gaya unik mereka melalui fashion. Koleksi kami dipilih dengan cermat untuk memastikan
                                     kualitas terbaik
@@ -53,7 +53,7 @@
                         </p>
                         <div class="mb-2 card shadow p-1">
                             <div>Email</div>
-                            <div>support@elegancewardrobe.com</div>
+                            <div>support@BoFCareers.com</div>
                         </div>
                         <div class="mb-2 card shadow p-1">
                             <div>Phone</div>

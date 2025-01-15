@@ -16,7 +16,7 @@
     <!-- Navbar -->
     <div class="header text-center">
         <div class="container d-flex align-items-center justify-content-center">
-            <h3 class="my-2">Elegance Wardrobe</h3>
+            <h3 class="my-2">BoF Careers</h3>
         </div>
     </div>
 
