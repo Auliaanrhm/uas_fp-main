@@ -1,0 +1,62 @@
+pipeline {
+  agent any
+
+  environment {
+    APP_NAME = 'apps-go-cloud'
+    DOCKER_IMAGE = 'auliaanrhm/apps-go-cloud'
+    DOCKER_TAG = 'latest'
+    DOCKER_CREDENTIALS = 'dockerhub-credentials'
+  }
+
+  options { timestamps() }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        echo '📥 Mengambil kode dari GitHub...'
+        checkout scm
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        echo '🐳 Membuild Docker image...'
+        bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% .'
+      }
+    }
+
+    stage('Push to Docker Hub') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'USR', passwordVariable: 'PWD')]) {
+          bat '''
+          docker login -u %USR% -p %PWD%
+          docker push %DOCKER_IMAGE%:%DOCKER_TAG%
+          '''
+        }
+      }
+    }
+
+    stage('Run Docker Compose') {
+      steps {
+        echo '🚀 Menjalankan container...'
+        bat '''
+        docker compose down --remove-orphans
+        docker compose up -d --build
+        docker ps
+        '''
+      }
+    }
+
+    stage('Smoke Test') {
+      steps {
+        bat 'docker logs apps_go_cloud --tail=20'
+      }
+    }
+  }
+
+  post {
+    always {
+      echo '✅ Pipeline selesai.'
+    }
+  }
+}
