@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        COMPOSE_FILE = 'docker-compose.yml'
+        DOCKER_IMAGE = "auliaanrhm/uas-fp-laravel"
+        DOCKER_TAG = "latest"
+        DOCKER_CREDENTIALS = "dockerhub-credentials"
     }
 
     stages {
@@ -16,35 +18,29 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Membuild image Laravel...'
-                sh 'docker-compose build'
+                bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% .'
             }
         }
 
-        stage('Start Containers') {
+        stage('Push to Docker Hub') {
             steps {
-                echo '🚀 Menjalankan container...'
-                sh 'docker-compose up -d'
+                echo '📦 Push image ke Docker Hub...'
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    bat '''
+                    docker login -u %USERNAME% -p %PASSWORD%
+                    docker push %DOCKER_IMAGE%:%DOCKER_TAG%
+                    '''
+                }
             }
         }
 
-        stage('Check Laravel Version') {
+        stage('Deploy Container') {
             steps {
-                echo '🔍 Mengecek apakah Laravel berjalan...'
-                sh 'docker exec laravel_app php artisan --version'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                echo '🧪 Menjalankan test Laravel (jika ada)...'
-                sh 'docker exec laravel_app php artisan test || true'
-            }
-        }
-
-        stage('Stop Containers') {
-            steps {
-                echo '🧹 Menghentikan container...'
-                sh 'docker-compose down'
+                echo '🚀 Menjalankan container dari Docker Hub...'
+                bat '''
+                docker pull %DOCKER_IMAGE%:%DOCKER_TAG%
+                docker run -d -p 8082:8000 --name laravel_app %DOCKER_IMAGE%:%DOCKER_TAG%
+                '''
             }
         }
     }
@@ -55,4 +51,3 @@ pipeline {
         }
     }
 }
-
