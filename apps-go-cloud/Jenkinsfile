@@ -1,17 +1,80 @@
-stage('Smoke Test') {
-  steps {
-    echo '🩺 Smoke test: cek /healthz'
-    sleep time: 5, unit: 'SECONDS'                  // beri waktu container start
-    retry(3) {                                      // coba 3x, jeda 3 detik
-      sleep time: 3, unit: 'SECONDS'
-      bat 'curl -sSf http://localhost:8080/healthz >NUL'  // sukses jika HTTP 200
+// apps-go-cloud/Jenkinsfile (Declarative, Windows)
+
+pipeline {
+  agent any
+
+  environment {
+    APP_NAME          = 'apps-go-cloud'
+    DOCKER_IMAGE      = 'auliaanrhm/apps-go-cloud'
+    DOCKER_TAG        = 'latest'
+    DOCKER_CREDENTIALS = 'dockerhub-credentials'
+  }
+
+  // opsional: biar checkout kita yang atur sendiri
+  options { skipDefaultCheckout(true) }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        echo '📥 Checkout SCM'
+        checkout scm
+      }
+    }
+
+    stage('Build Docker Image') {
+      steps {
+        echo '🐳 Build Docker image'
+        bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% .'
+      }
+    }
+
+    stage('Push to Docker Hub') {
+      steps {
+        echo '📤 Push ke Docker Hub'
+        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'USR', passwordVariable: 'PWD')]) {
+          bat '''
+          docker login -u %USR% -p %PWD%
+          docker push %DOCKER_IMAGE%:%DOCKER_TAG%
+          '''
+        }
+      }
+    }
+
+    stage('Run Docker Compose') {
+      steps {
+        echo '🚀 docker compose up'
+        bat '''
+        docker compose down --remove-orphans
+        docker compose up -d --build
+        docker ps
+        '''
+      }
+    }
+
+    stage('Smoke Test') {
+      steps {
+        echo '🩺 cek /healthz dengan retry'
+        sleep time: 5, unit: 'SECONDS'
+        retry(3) {
+          sleep time: 3, unit: 'SECONDS'
+          // Windows sudah ada curl bawaan
+          bat 'curl -sSf http://localhost:8080/healthz >NUL'
+        }
+      }
+      post {
+        failure {
+          echo '❌ Smoke test gagal, tampilkan log container'
+          bat 'docker ps'
+          bat 'docker logs apps_go_cloud --tail=200 || ver >NUL'
+        }
+      }
     }
   }
+
   post {
-    failure {
-      echo '❌ Smoke test gagal, tampilkan log:'
-      bat 'docker ps'
-      bat 'docker logs apps_go_cloud --tail=200 || ver >NUL'
+    always {
+      echo '✅ Pipeline selesai'
     }
   }
 }
