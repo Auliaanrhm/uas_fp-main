@@ -2,56 +2,54 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME           = 'apps-go-cloud'
-        DOCKER_IMAGE       = 'auliaanrhm/apps-go-cloud'
-        DOCKER_TAG         = 'latest'
-        DOCKER_CREDENTIALS = 'dockerhub-credentials'
-        COMPOSE_PROJECT_NAME = 'appsgo_jenkins'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        IMAGE_NAME = "auliaanrhm/apps-go-cloud:latest"
     }
-
-    options { skipDefaultCheckout(true) }
 
     stages {
 
         stage('Checkout') {
             steps {
-                echo '📥 Checkout repository dari GitHub'
+                echo "📥 Checkout SCM"
                 checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo '🐳 Membangun Docker image aplikasi'
-                bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% .'
+                echo "🐳 Build Docker image"
+                bat """
+                docker build -t ${IMAGE_NAME} .
+                """
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo '📤 Mengunggah image ke Docker Hub'
-                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'USR', passwordVariable: 'PWD')]) {
-                    bat '''
-                    docker login -u %USR% -p %PWD%
-                    docker push %DOCKER_IMAGE%:%DOCKER_TAG%
-                    '''
+                echo "📤 Push ke Docker Hub"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat """
+                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                    docker push ${IMAGE_NAME}
+                    """
                 }
             }
         }
 
         stage('Run Docker Compose') {
             steps {
-                echo '🚀 Menjalankan docker compose'
-                bat '''
-                docker compose down --remove-orphans --volumes || ver >NUL
-                docker rm -f mysql_db phpmyadmin laravel_app 2>NUL || ver >NUL
+                echo "🚀 docker compose up"
+                bat """
+                docker compose down --remove-orphans
                 docker compose up -d --build
-                docker ps
-                '''
+                """
             }
         }
     }
 
     post {
         always {
-            echo '✅ Pipeline selesai tanpa smo
+            echo "✅ Pipeline selesai"
+        }
+    }
+}
