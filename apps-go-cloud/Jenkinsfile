@@ -1,49 +1,19 @@
-pipeline {
-    agent any
+stage('Run Docker Compose') {
+  steps {
+    echo '🚀 docker compose up'
+    withEnv([
+      "COMPOSE_PROJECT_NAME=jenkinsdockerpipeline",  // atau "jenkins_${BUILD_NUMBER}"
+      "DB_PORT=13307",
+      "PHPMYADMIN_PORT=18082"
+    ]) {
+      bat '''
+        REM bersihkan container yang mungkin pegang port kita
+        for /f "tokens=1" %%i in ('docker ps -aq --filter "publish=13307"') do docker rm -f %%i
+        for /f "tokens=1" %%i in ('docker ps -aq --filter "publish=18082"') do docker rm -f %%i
 
-    environment {
-        DOCKERHUB_USER = 'auliaanrhm'
-        IMAGE_NAME = 'apps-go-cloud'
+        docker compose down --remove-orphans
+        docker compose up -d --build
+      '''
     }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                echo '📥 Checkout SCM'
-                checkout scm
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                echo '🐳 Build Docker image'
-                bat 'docker build -t %DOCKERHUB_USER%/%IMAGE_NAME%:latest .'
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                echo '📤 Push ke Docker Hub'
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
-                    bat 'docker push %DOCKERHUB_USER%/%IMAGE_NAME%:latest'
-                }
-            }
-        }
-
-        stage('Run Docker Compose') {
-            steps {
-                echo '🚀 docker compose up'
-                bat 'docker compose down --remove-orphans'
-                bat 'docker compose up -d --build'
-            }
-        }
-    }
-
-    post {
-        always {
-            echo '✅ Pipeline selesai'
-        }
-    }
+  }
 }
-

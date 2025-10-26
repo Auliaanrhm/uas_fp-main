@@ -1,11 +1,11 @@
-version: "3.9"
-
 services:
-  web:
-    build: .
-    container_name: apps_go_cloud
-    environment:
-      - PORT=8080
+  db:
     ports:
-      - "8080:8080"
-    restart: unless-stopped
+      - "${DB_PORT:-13307}:3306"        # default 13307 (bukan 3307)
+  phpmyadmin:
+    ports:
+      - "${PHPMYADMIN_PORT:-18082}:80"  # default 18082 (bukan 8082)
+  app:
+    # kalau app perlu di-expose:
+    # ports:
+    #   - "${APP_PORT:-18005}:8000"
