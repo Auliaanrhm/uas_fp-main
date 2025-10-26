@@ -1,38 +1,16 @@
 pipeline {
   agent any
-  options { timestamps() }
 
   environment {
-    // --- app & docker metadata (asli dari user)
-    APP_NAME           = 'BoF.Careers'              // nama tampilan
+    // --- app & docker metadata
+    APP_NAME           = 'bof-careers'                  // hindari titik/space utk nama compose
     DOCKER_HUB_USER    = 'auliaanrhm'
-    DOCKER_TAG         = 'latest'
-    DOCKER_CREDENTIALS = 'dockerhub-credentials'    // id credentials di Jenkins
-    // DOCKER_IMAGE akan diisi di stage Init (dibikin slug yg valid)
+    DOCKER_TAG         = 'latest'                       // bisa ganti ke "${BUILD_NUMBER}"
+    DOCKER_IMAGE       = "${DOCKER_HUB_USER}/${APP_NAME}:${DOCKER_TAG}"
+    DOCKER_CREDENTIALS = 'dockerhub-credentials'
   }
 
   stages {
-    stage('Init') {
-      steps {
-        script {
-          // slug aman untuk image & COMPOSE_PROJECT_NAME:
-          // - lowercase
-          // - semua non [a-z0-9] jadi '-'
-          // - trim '-' di awal/akhir
-          env.APP_SLUG = env.APP_NAME.toLowerCase()
-                                   .replaceAll('[^a-z0-9]+','-')
-                                   .replaceAll('(^-|-$)','')
-
-          env.DOCKER_IMAGE = "${env.DOCKER_HUB_USER}/${env.APP_SLUG}:${env.DOCKER_TAG}"
-          env.COMPOSE_PROJECT_NAME = env.APP_SLUG
-        }
-        echo "🔧 APP_NAME             = ${env.APP_NAME}"
-        echo "🔧 APP_SLUG             = ${env.APP_SLUG}"
-        echo "🔧 DOCKER_IMAGE         = ${env.DOCKER_IMAGE}"
-        echo "🔧 COMPOSE_PROJECT_NAME = ${env.COMPOSE_PROJECT_NAME}"
-      }
-    }
-
     stage('Checkout') {
       steps {
         echo "📥 Checkout ${env.APP_NAME}…"
@@ -42,14 +20,14 @@ pipeline {
 
     stage('Build Docker Image') {
       steps {
-        echo "🐳 Build image %DOCKER_IMAGE%"
+        echo "🐳 Build image ${env.DOCKER_IMAGE}"
         bat  'docker build -t %DOCKER_IMAGE% .'
       }
     }
 
     stage('Push to Docker Hub') {
       steps {
-        echo "📤 Push %DOCKER_IMAGE%"
+        echo "📤 Push ${env.DOCKER_IMAGE}"
         withCredentials([usernamePassword(
           credentialsId: env.DOCKER_CREDENTIALS,
           usernameVariable: 'USER',
@@ -64,9 +42,8 @@ pipeline {
     stage('Run Docker Compose') {
       steps {
         echo '🚀 docker compose up'
-        // pakai slug supaya nama network/container valid
-        bat 'set COMPOSE_PROJECT_NAME=%COMPOSE_PROJECT_NAME% && docker compose down --remove-orphans'
-        bat 'set COMPOSE_PROJECT_NAME=%COMPOSE_PROJECT_NAME% && docker compose up -d --build'
+        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose down --remove-orphans'
+        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose up -d --build'
       }
     }
   }
