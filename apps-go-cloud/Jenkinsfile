@@ -7,6 +7,9 @@ pipeline {
     DOCKER_TAG         = 'latest'
     DOCKER_IMAGE       = "${DOCKER_HUB_USER}/${APP_NAME}:${DOCKER_TAG}"
     DOCKER_CREDENTIALS = 'dockerhub-credentials'
+
+    // port untuk phpMyAdmin (harus sama dengan yang dipakai di docker-compose.yaml)
+    PHPMYADMIN_PORT    = '18082'
   }
 
   stages {
@@ -41,13 +44,27 @@ pipeline {
     stage('Run Docker Compose') {
       steps {
         echo '🚀 docker compose up'
+
+        // 1) Bebasin port phpMyAdmin jika ada container lain yang publish port tsb
+        powershell '''
+          $port = $env:PHPMYADMIN_PORT
+          $cid = docker ps -q --filter "publish=$port"
+          if ($cid) {
+            Write-Host "Port $port in use by container $cid -> removing…"
+            docker rm -f $cid | Out-Null
+          }
+        '''
+
+        // 2) Hapus container lama project ini (aman walau belum ada)
         powershell '''
           "db","phpmyadmin","app" | ForEach-Object {
             try { docker rm -f $_ | Out-Null } catch {}
           }
         '''
-        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose down -v --remove-orphans'
-        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose up -d --build'
+
+        // 3) Compose down/up dengan env yang diperlukan
+        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && set "PHPMYADMIN_PORT=%PHPMYADMIN_PORT%" && docker compose down -v --remove-orphans'
+        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && set "PHPMYADMIN_PORT=%PHPMYADMIN_PORT%" && docker compose up -d --build'
       }
     }
   }
