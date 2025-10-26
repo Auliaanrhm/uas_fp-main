@@ -1,81 +1,49 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    DOCKERHUB_USER   = 'auliaanrhm'
-    IMAGE_NAME       = "${DOCKERHUB_USER}/apps-go-cloud:latest"
-    // Unikkan nama project compose tiap build agar tidak bentrok container lama
-    COMPOSE_PROJECT_NAME = "jenkins_${env.JOB_NAME.replaceAll('[^A-Za-z0-9]', '').toLowerCase()}_${env.BUILD_NUMBER}"
-  }
-
-  options {
-    // buang log build lama
-    buildDiscarder(logRotator(numToKeepStr: '10'))
-    // hindari build paralel
-    disableConcurrentBuilds()
-    // timeout keseluruhan pipeline (opsional)
-    timeout(time: 60, unit: 'MINUTES')
-  }
-
-  stages {
-
-    stage('Checkout') {
-      steps {
-        echo '📥 Checkout SCM'
-        checkout scm
-      }
+    environment {
+        DOCKERHUB_USER = 'auliaanrhm'
+        IMAGE_NAME = 'apps-go-cloud'
     }
 
-    stage('Build Docker Image') {
-      steps {
-        echo '🐳 Build Docker image'
-        // Jalankan dari root workspace (Dockerfile & laravel ada di root repo)
-        bat """
-          docker build -t ${IMAGE_NAME} .
-        """
-      }
-    }
-
-    stage('Push to Docker Hub') {
-      steps {
-        echo '📤 Push ke Docker Hub'
-        withCredentials([usernamePassword(
-          credentialsId: 'dockerhub-credentials', // <- pastikan ID cred ini benar di Jenkins
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
-        )]) {
-          bat """
-            docker login -u %DOCKER_USER% -p %DOCKER_PASS%
-            docker push ${IMAGE_NAME}
-          """
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Checkout SCM'
+                checkout scm
+            }
         }
-      }
+
+        stage('Build Docker Image') {
+            steps {
+                echo '🐳 Build Docker image'
+                bat 'docker build -t %DOCKERHUB_USER%/%IMAGE_NAME%:latest .'
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                echo '📤 Push ke Docker Hub'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
+                    bat 'docker push %DOCKERHUB_USER%/%IMAGE_NAME%:latest'
+                }
+            }
+        }
+
+        stage('Run Docker Compose') {
+            steps {
+                echo '🚀 docker compose up'
+                bat 'docker compose down --remove-orphans'
+                bat 'docker compose up -d --build'
+            }
+        }
     }
 
-    stage('Run Docker Compose') {
-  steps {
-    echo '🚀 docker compose up'
-    withEnv(["COMPOSE_PROJECT_NAME=jenkins_${env.JOB_NAME.replaceAll('[^A-Za-z0-9]', '').toLowerCase()}_${env.BUILD_NUMBER}"]) {
-      bat """
-        rem bersihkan container lama yang mungkin masih ada
-        docker compose down --remove-orphans
-
-        rem container lama dari setup sebelumnya (abaikan error jika tidak ada)
-        docker rm -f mysql_db 2>NUL
-        docker rm -f laravel_app 2>NUL
-        docker rm -f phpmyadmin 2>NUL
-
-        rem jalankan compose baru
-        docker compose up -d --build
-      """
+    post {
+        always {
+            echo '✅ Pipeline selesai'
+        }
     }
-  }
 }
 
-
-  post {
-    always {
-      echo '✅ Pipeline selesai'
-    }
-  }
-}
