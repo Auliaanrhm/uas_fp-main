@@ -2,10 +2,9 @@ pipeline {
   agent any
 
   environment {
-    // --- app & docker metadata
-    APP_NAME           = 'bof-careers'                  // hindari titik/space utk nama compose
+    APP_NAME           = 'bof-careers'
     DOCKER_HUB_USER    = 'auliaanrhm'
-    DOCKER_TAG         = 'latest'                       // bisa ganti ke "${BUILD_NUMBER}"
+    DOCKER_TAG         = 'latest'
     DOCKER_IMAGE       = "${DOCKER_HUB_USER}/${APP_NAME}:${DOCKER_TAG}"
     DOCKER_CREDENTIALS = 'dockerhub-credentials'
   }
@@ -42,7 +41,12 @@ pipeline {
     stage('Run Docker Compose') {
       steps {
         echo '🚀 docker compose up'
-        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose down --remove-orphans'
+        powershell '''
+          "db","phpmyadmin","app" | ForEach-Object {
+            try { docker rm -f $_ | Out-Null } catch {}
+          }
+        '''
+        bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose down -v --remove-orphans'
         bat 'set "COMPOSE_PROJECT_NAME=%APP_NAME%" && docker compose up -d --build'
       }
     }

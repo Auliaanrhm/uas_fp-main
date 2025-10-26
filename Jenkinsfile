@@ -2,52 +2,51 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "auliaanrhm/uas-fp-laravel"
-        DOCKER_TAG = "latest"
-        DOCKER_CREDENTIALS = "dockerhub-credentials"
+        DOCKER_HUB_USER = 'auliaanrhm'
+        DOCKER_IMAGE = "${DOCKER_HUB_USER}/apps-go-cloud:latest"
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo '📥 Mengambil kode dari GitHub...'
-                checkout scm
+                echo '📥 Checkout repository...'
+                git branch: 'main', url: 'https://github.com/auliaanrhm/uas_fp-main.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo '🐳 Membuild image Laravel...'
-                bat 'docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% .'
+                echo '🐳 Building Docker image...'
+                bat 'docker build -t %DOCKER_IMAGE% .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo '📦 Push image ke Docker Hub...'
-                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    bat '''
-                    docker login -u %USERNAME% -p %PASSWORD%
-                    docker push %DOCKER_IMAGE%:%DOCKER_TAG%
-                    '''
+                echo '📤 Pushing image to Docker Hub...'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    bat 'docker login -u %USER% -p %PASS%'
+                    bat 'docker push %DOCKER_IMAGE%'
                 }
             }
         }
 
-        stage('Deploy Container') {
+        stage('Run Docker Compose') {
             steps {
-                echo '🚀 Menjalankan container dari Docker Hub...'
-                bat '''
-                docker pull %DOCKER_IMAGE%:%DOCKER_TAG%
-                docker run -d -p 8082:8000 --name laravel_app %DOCKER_IMAGE%:%DOCKER_TAG%
-                '''
+                echo '🚀 Running docker-compose...'
+                bat 'docker compose down -v --remove-orphans'
+                bat 'docker compose build --no-cache'
+                bat 'docker compose up -d'
             }
         }
     }
 
     post {
-        always {
-            echo '✅ Pipeline selesai.'
+        success {
+            echo '✅ Pipeline finished successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed.'
         }
     }
 }
