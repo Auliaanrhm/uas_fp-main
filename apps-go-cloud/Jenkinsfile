@@ -53,18 +53,25 @@ pipeline {
     }
 
     stage('Run Docker Compose') {
-      steps {
-        echo '🚀 docker compose up'
-        // Pakai COMPOSE_PROJECT_NAME supaya nama container unik (hindari bentrok)
-        withEnv(["COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}"]) {
-          bat """
-            docker compose down --remove-orphans
-            docker compose up -d --build
-          """
-        }
-      }
+  steps {
+    echo '🚀 docker compose up'
+    withEnv(["COMPOSE_PROJECT_NAME=jenkins_${env.JOB_NAME.replaceAll('[^A-Za-z0-9]', '').toLowerCase()}_${env.BUILD_NUMBER}"]) {
+      bat """
+        rem bersihkan container lama yang mungkin masih ada
+        docker compose down --remove-orphans
+
+        rem container lama dari setup sebelumnya (abaikan error jika tidak ada)
+        docker rm -f mysql_db 2>NUL
+        docker rm -f laravel_app 2>NUL
+        docker rm -f phpmyadmin 2>NUL
+
+        rem jalankan compose baru
+        docker compose up -d --build
+      """
     }
   }
+}
+
 
   post {
     always {

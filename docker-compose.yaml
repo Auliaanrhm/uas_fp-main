@@ -1,50 +1,29 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # jangan pakai container_name
-    restart: always
-    ports:
-      - "8000:8000"
+    build: .
+    depends_on: [db]
     environment:
       DB_HOST: db
-      DB_PORT: "3306"
-      DB_DATABASE: uas_fp
-      DB_USERNAME: laravel
-      DB_PASSWORD: laravel
-    volumes:
-      - .:/var/www
-    depends_on:
-      - db
+      DB_PORT: 3306
 
   db:
     image: mysql:8.0
-    # jangan pakai container_name
-    restart: always
+    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: uas_fp
+      MYSQL_DATABASE: laravel
       MYSQL_USER: laravel
-      MYSQL_PASSWORD: laravel
+      MYSQL_PASSWORD: secret
       MYSQL_ROOT_PASSWORD: root
     volumes:
       - db_data:/var/lib/mysql
-    ports:
-      - "3307:3306"
+    # HAPUS blok "ports:" agar TIDAK expose 3307
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    # jangan pakai container_name
-    restart: always
-    ports:
-      - "8082:80"
+    depends_on: [db]
     environment:
       PMA_HOST: db
-      PMA_PORT: "3306"
-      PMA_USER: laravel
-      PMA_PASSWORD: laravel
-    depends_on:
-      - db
-
+    ports:
+      - "8082:80"   # ini boleh, untuk akses UI
 volumes:
   db_data:
